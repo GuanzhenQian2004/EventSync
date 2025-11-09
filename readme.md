@@ -1,18 +1,27 @@
 # EventSync
 
 ## Set Up Enviornment
-In EventSync directory, create a file name .env:  
+In EventSync directory, create two enviornment file name .env and env.yaml:  
 Replace string inside " " with keys
   
 .env
 ```
-PROJECT_ID="cs4750db-476404"
-REGION="us-east4"
-INSTANCE_CONNECTION_NAME="cs4750db-476404:us-east4:eventsync1"
-DB_USER="root"
-DB_PASS="EventSync123#"
-DB_NAME="eventsync_data"
+PROJECT_ID="___"
+REGION="___"
+INSTANCE_CONNECTION_NAME="___"
+DB_USER="___"
+DB_PASS="___"
+DB_NAME="___"
 ```
+
+env.yaml
+```
+INSTANCE_CONNECTION_NAME: "___"
+DB_USER: "___"
+DB_PASS: "___"
+DB_NAME: "___"
+```
+
 
 You need to add env variables to enviornment everytime you open a new terminal.
 
@@ -85,4 +94,5 @@ gcloud run deploy flask-mysql-demo `
   --platform=managed `
   --allow-unauthenticated `
   --add-cloudsql-instances=$env:INSTANCE_CONNECTION_NAME
+  --env-vars-file=env.yaml
 ```
