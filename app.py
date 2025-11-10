@@ -36,7 +36,20 @@ def get_db_connection():
 
 @app.get("/")
 def home():
-    return Response("Hello from Cloud Run + MySQL! (Fixed text)", mimetype="text/plain")
+    try:
+        conn=get_db_connection()
+        with conn.cursor() as cur:
+            cur.execute(
+                "SELECT event_name, org_name FROM event NATURAL JOIN host"
+            )
+            rows = cur.fetchall()
+            rows1 = [t[0] for t in rows]
+            rows2 = [t[1] for t in rows]
+        conn.close()
+        return jsonify({"events":rows1,"organizers":rows2})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+    #return Response("Hello from Cloud Run + MySQL! (Fixed text)", mimetype="text/plain")
 
 @app.get("/table")
 def tables():
