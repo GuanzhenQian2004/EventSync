@@ -86,6 +86,106 @@ def login():
         flash("No account for that email. Please sign up.")
         return redirect(url_for("signup"))
 
+
+def login_required(view):
+    @wraps(view)
+    def wrapper(*args, **kwargs):
+        if not session.get("user_email"):
+            flash("Please log in.")
+            return redirect(url_for("login"))
+        return view(*args, **kwargs):
+    return wrapper
+
+@app.route("/events/new", methods=["GET", "POST"])
+@login_required
+def create_events():
+    #load organizations and venues for the form w dropdowns
+    organizations, venues, load_err = [], [], None
+    try: 
+        conn = get_db_connection()
+        with conn.cursor() as cur: 
+            cur.execute("SELECT org_name FROM organization ORDER BY org_name")
+            orgs = [row[0] for row in cur.fetchall()]
+            cur.execute("""
+                SELECT v.vid, CONCAT(v.street, ', ', v.city, ' ', z.state, ' ', v.zip) AS vlabel
+                FROM venue v
+                JOIN zip_codes z ON z.zip = v.zip
+                ORDER BY v.city, v.street
+            """)
+            venues = cur.fetchall() #list[(vid,label)]
+        except Exception as e: 
+            load_err = str(e)
+        finally: 
+            try: conn.close()
+            except: pass
+        
+        if request.method == "GET":
+            return render_template("event_new.html", organizations=orgs, venues=venues, err=load_err)
+        
+    # POST: validate inputs
+    event_name = (request.form.get("event_name") or "").strip()
+    org_name = (request.form.get("org_name") or "").strip()
+    vid = request.form.get("vid")
+    room_number = request.form.get("room_number") or None
+    date_str = (request.form.get("date") or "").strip()
+    start_str = (request.form.get("start_time") or "").strip()
+    end_str = (request.form.get("end_time") or "").strip()
+    price_str = (request.form.get("price") or "0").strip()
+    description = (request.form.get("description") or "").strip()
+
+    # Basic required fields
+    if not (event_name and org_name and vid and date_str and start_str and end_str):
+        flash("Please fill all required fields.")
+        return redirect(url_for("create_event"))
+
+  # Price check 
+    try:
+        price = float(price_str)
+        if price < 0:
+            raise ValueError()
+    except ValueError:
+        flash("Price must be a non-negative number.")
+        return redirect(url_for("create_event"))
+
+    #Insert event, then host, link to organization
+    conn.get_db_connection()
+    try: 
+        with conn.cursor() as cur: 
+        #Comfirm foreign keys exist
+        cur.execute("SELECT 1 FROM venue WHERE vid=%s", (vid,))
+            if not cur.fetchone():
+                flash("Selected venue does not exist.")
+                conn.close()
+                return redirect(url_for("create_event"))
+
+        cur.execute("SELECT 1 FROM organization WHERE org_name=%s", (org_name,))
+            if not cur.fetchone():
+                flash("Selected organization does not exist.")
+                conn.close()
+                return redirect(url_for("create_event"))
+
+        # Insert into event (AUTO_INCREMENT path)
+        cur.execute("""
+            INSERT INTO event (vid, room_number, date, start_time, end_time, description, price, event_name)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+            """, 
+            (vid, room_number, date, start_time, end_time, description, price, event_name)
+            )
+            eid = cur.lastrowid  
+
+            # Link event to org in host
+            cur.execute("INSERT INTO host (eid, org_name) VALUES (%s, %s)", (eid, org_name))
+
+        conn.commit()
+        flash("Event created!")
+        return redirect(url_for("home"))
+    except Exception as e:
+        conn.rollback()
+        flash(f"Could not create event: {e}")
+        return redirect(url_for("create_event"))
+    finally:
+        conn.close()
+
 @app.route("/signup", methods=["GET", "POST"])
 def signup():
     if request.method == "GET":
