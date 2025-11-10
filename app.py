@@ -1,8 +1,11 @@
 import os
-from flask import Flask, jsonify, Response
+from flask import Flask, jsonify, Response, render_template, request, redirect, url_for, session, flash
 import pymysql
 
-app = Flask(__name__)
+app = Flask(__name__, template_folder="templates")
+
+# Simple dev secret so session/flash works
+app.secret_key = "dev"
 
 def get_db_connection():
     """
@@ -17,8 +20,7 @@ def get_db_connection():
     running_on_cloud_run = os.getenv("K_SERVICE") is not None
 
     if running_on_cloud_run and instance:
-        # Use the Cloud SQL connector socket on Cloud Run
-        # host is a Unix socket path; no port
+        # Cloud Run via Unix socket
         conn = pymysql.connect(
             user=user, password=password, database=db,
             unix_socket=f"/cloudsql/{instance}",
@@ -34,22 +36,110 @@ def get_db_connection():
         )
     return conn
 
+# ---------- Pages ----------
+
 @app.get("/")
 def home():
+    # NEW: fetch event_name, org_name for homepage
+    events = []
+    err = None
     try:
-        conn=get_db_connection()
+        conn = get_db_connection()
         with conn.cursor() as cur:
-            cur.execute(
-                "SELECT event_name, org_name FROM event NATURAL JOIN host"
-            )
-            rows = cur.fetchall()
-            rows1 = [t[0] for t in rows]
-            rows2 = [t[1] for t in rows]
-        conn.close()
-        return jsonify({"events":rows1,"organizers":rows2})
+            cur.execute("SELECT event_name, org_name FROM event NATURAL JOIN host ORDER BY event_name")
+            events = cur.fetchall()  # list of tuples: (event_name, org_name)
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
-    #return Response("Hello from Cloud Run + MySQL! (Fixed text)", mimetype="text/plain")
+        err = str(e)
+    finally:
+        try:
+            conn.close()
+        except:
+            pass
+
+    return render_template("home.html", events=events, err=err)
+
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if request.method == "GET":
+        return render_template("login.html")
+    # POST
+    email = (request.form.get("user_email") or "").strip().lower()
+    if not email:
+        flash("Email is required.")
+        return redirect(url_for("login"))
+
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT user_email, name FROM users WHERE user_email=%s", (email,))
+            row = cur.fetchone()
+    finally:
+        conn.close()
+
+    if row:
+        # NOTE: with Cursor (tuples), row[0]=user_email, row[1]=name
+        session["user_email"] = row[0]
+        session["name"] = row[1]
+        flash("Logged in.")
+        return redirect(url_for("profile"))
+    else:
+        flash("No account for that email. Please sign up.")
+        return redirect(url_for("signup"))
+
+@app.route("/signup", methods=["GET", "POST"])
+def signup():
+    if request.method == "GET":
+        return render_template("signup.html")
+    # POST
+    email = (request.form.get("user_email") or "").strip().lower()
+    name = (request.form.get("name") or "").strip()
+    if not email or not name:
+        flash("Email and name are required.")
+        return redirect(url_for("signup"))
+
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("INSERT INTO users (user_email, name) VALUES (%s, %s)", (email, name))
+        flash("Account created. You are now logged in.")
+        session["user_email"] = email
+        session["name"] = name
+        return redirect(url_for("profile"))
+    except pymysql.err.IntegrityError:
+        flash("That email already exists. Try logging in.")
+        return redirect(url_for("login"))
+    finally:
+        conn.close()
+
+@app.get("/profile")
+def profile():
+    email = session.get("user_email")
+    if not email:
+        flash("Please log in.")
+        return redirect(url_for("login"))
+
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT user_email, name FROM users WHERE user_email=%s", (email,))
+            row = cur.fetchone()
+    finally:
+        conn.close()
+
+    # row is a tuple with (user_email, name) or None
+    user = None
+    if row:
+        user = type("U", (), {"user_email": row[0], "name": row[1]})
+
+    return render_template("profile.html", user=user)
+
+@app.get("/logout")
+def logout():
+    session.clear()
+    flash("Logged out.")
+    return redirect(url_for("home"))
+
+# ---------- Existing debug endpoint ----------
 
 @app.get("/table")
 def tables():

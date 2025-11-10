@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Home · EventSync{% endblock %}
+{% block content %}
+  <h1>EventSync</h1>
+  <p class="muted">Placeholder home page. Below are events (event_name · org_name) from <code>NATURAL JOIN</code>.</p>
+
+  {% if err %}
+    <div class="flash">Error loading events: {{ err }}</div>
+  {% endif %}
+
+  {% if events and events|length > 0 %}
+    <ul>
+      {% for ev in events %}
+        <li>{{ ev[0] }} · {{ ev[1] }}</li>
+      {% endfor %}
+    </ul>
+  {% else %}
+    <p class="muted">No events found.</p>
+  {% endif %}
+{% endblock %}

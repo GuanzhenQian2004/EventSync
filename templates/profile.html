@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block title %}Profile · EventSync{% endblock %}
+{% block content %}
+  <h1>Profile</h1>
+  {% if user %}
+    <p><strong>Email:</strong> {{ user.user_email }}</p>
+    <p><strong>Name:</strong> {{ user.name }}</p>
+    <p class="muted">Placeholder profile page. Add more fields and actions later.</p>
+  {% else %}
+    <p class="muted">You’re not logged in.</p>
+  {% endif %}
+{% endblock %}

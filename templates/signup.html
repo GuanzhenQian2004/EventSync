@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block title %}Signup · EventSync{% endblock %}
+{% block content %}
+  <h1>Signup</h1>
+  <p class="muted">Create a user with email + name.</p>
+  <form method="post">
+    <label for="user_email">Email</label>
+    <input id="user_email" name="user_email" type="email" placeholder="abc123@uva.edu" required />
+    <label for="name">Name</label>
+    <input id="name" name="name" type="text" placeholder="Johnny Depp" required />
+    <button type="submit">Create Account</button>
+  </form>
+{% endblock %}

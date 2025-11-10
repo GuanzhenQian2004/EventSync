@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>{% block title %}EventSync{% endblock %}</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; margin: 0; background:#fafafa; color:#222; }
+    header { background:#0b57d0; color:white; padding: 12px 20px; }
+    header a { color:white; text-decoration:none; margin-right:16px; font-weight:600; }
+    main { max-width: 900px; margin: 24px auto; background:white; border:1px solid #e8e8e8; border-radius:10px; padding:20px; }
+    form label { display:block; margin:12px 0 6px; font-weight:600; }
+    input[type="text"], input[type="email"] { width: 100%; padding:10px; border:1px solid #ccc; border-radius:8px; }
+    button { margin-top:14px; padding:10px 16px; border:none; border-radius:8px; background:#0b57d0; color:white; font-weight:700; cursor:pointer; }
+    .muted { color:#666; }
+    .flash { background:#fdecea; color:#611a15; border:1px solid #f5c6cb; padding:10px 12px; border-radius:8px; margin:12px 0; }
+    nav { display:flex; gap:12px; align-items:center; }
+    .spacer { flex:1; }
+  </style>
+</head>
+<body>
+  <header>
+    <nav>
+      <a href="{{ url_for('home') }}">Home</a>
+      <a href="{{ url_for('signup') }}">Signup</a>
+      <a href="{{ url_for('login') }}">Login</a>
+      <a href="{{ url_for('profile') }}">Profile</a>
+      <a href="{{ url_for('tables') }}">Tables (debug)</a>
+      <div class="spacer"></div>
+      {% if session.get('user_email') %}
+        <span class="muted">Signed in as {{ session.get('user_email') }}</span>
+        <a href="{{ url_for('logout') }}">Logout</a>
+      {% endif %}
+    </nav>
+  </header>
+  <main>
+    {% with messages = get_flashed_messages() %}
+      {% if messages %}
+        {% for m in messages %}<div class="flash">{{ m }}</div>{% endfor %}
+      {% endif %}
+    {% endwith %}
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>
