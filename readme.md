@@ -81,19 +81,37 @@ docker run --rm -p 5000:8080 `
 
 Mac:
 ```
-docker run --rm -p 5001:8080 -e DB_USER=$DB_USER -e DB_PASS=$DB_PASS -e DB_NAME=$DB_NAME -e INSTANCE_CONNECTION_NAME=$INSTANCE_CONNECTION_NAME -e DB_HOST=host.docker.internal -e DB_PORT=3306 eventsync-flask:local
+docker run --rm -p 5001:8080 \
+    -e DB_USER=$DB_USER \
+    -e DB_PASS=$DB_PASS \
+    -e DB_NAME=$DB_NAME \
+    -e INSTANCE_CONNECTION_NAME=$INSTANCE_CONNECTION_NAME \
+    -e DB_HOST=host.docker.internal \
+    -e DB_PORT=3306 \
+    eventsync-flask:local
 ```
 
 ## Deploy to Cloud
 
 Tag & push to Artifact Registry
+
+Windows:
 ```
 docker tag eventsync-flask:local $env:REGION-docker.pkg.dev/$env:PROJECT_ID/webapps/eventsync-flask:v1
 gcloud auth configure-docker $env:REGION-docker.pkg.dev
 docker push $env:REGION-docker.pkg.dev/$env:PROJECT_ID/webapps/eventsync-flask:v1
 ```
 
+Mac/Linux:
+```
+docker tag eventsync-flask:local $REGION-docker.pkg.dev/$PROJECT_ID/webapps/eventsync-flask:v1
+gcloud auth configure-docker $REGION-docker.pkg.dev
+docker push $REGION-docker.pkg.dev/$PROJECT_ID/webapps/eventsync-flask:v1
+```
+
 Deploy to Cloud Run
+
+Windows:
 ```
 gcloud run deploy flask-mysql-demo `
   --image=$env:REGION-docker.pkg.dev/$env:PROJECT_ID/webapps/eventsync-flask:v1 `
@@ -101,5 +119,16 @@ gcloud run deploy flask-mysql-demo `
   --platform=managed `
   --allow-unauthenticated `
   --add-cloudsql-instances=$env:INSTANCE_CONNECTION_NAME
+  --env-vars-file=env.yaml
+```
+
+Mac/Linux:
+```
+gcloud run deploy flask-mysql-demo \
+  --image=$REGION-docker.pkg.dev/$PROJECT_ID/webapps/eventsync-flask:v1 \
+  --region=$REGION \
+  --platform=managed \
+  --allow-unauthenticated \
+  --add-cloudsql-instances=$INSTANCE_CONNECTION_NAME \
   --env-vars-file=env.yaml
 ```
