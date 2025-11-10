@@ -100,12 +100,17 @@ def signup():
     conn = get_db_connection()
     try:
         with conn.cursor() as cur:
-            cur.execute("INSERT INTO users (user_email, name) VALUES (%s, %s)", (email, name))
+            cur.execute(
+                "INSERT INTO users (user_email, name) VALUES (%s, %s)",
+                 (email, name),
+            )   
+        conn.commit() # need conn.commit so the new user saves. 
         flash("Account created. You are now logged in.")
         session["user_email"] = email
         session["name"] = name
         return redirect(url_for("profile"))
     except pymysql.err.IntegrityError:
+        conn.rollback() #keeps connnection clean after an error.
         flash("That email already exists. Try logging in.")
         return redirect(url_for("login"))
     finally:
