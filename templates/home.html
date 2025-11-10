@@ -3,6 +3,7 @@
 {% block content %}
   <h1>EventSync</h1>
   <p class="muted">Placeholder home page. Below are events (event_name · org_name) from <code>NATURAL JOIN</code>.</p>
+  <input type = "text" id = "userSearch" placeholder="Search Events">
 
   {% if err %}
     <div class="flash">Error loading events: {{ err }}</div>
@@ -17,4 +18,5 @@
   {% else %}
     <p class="muted">No events found.</p>
   {% endif %}
+  <script src = "{{url_for('static',filename='search.js')}}"></script>
 {% endblock %}
