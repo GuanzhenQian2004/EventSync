@@ -66,6 +66,8 @@ docker build -t eventsync-flask:local .
 ```
 
 Run Container:
+
+Windows:
 ```
 docker run --rm -p 5000:8080 `
   -e DB_USER=$env:DB_USER `
@@ -76,6 +78,11 @@ docker run --rm -p 5000:8080 `
   -e DB_PORT=3306 `
   eventsync-flask:local
 ```
+
+Mac:
+'''
+docker run --rm -p 5001:8080 -e DB_USER=$DB_USER -e DB_PASS=$DB_PASS -e DB_NAME=$DB_NAME -e INSTANCE_CONNECTION_NAME=$INSTANCE_CONNECTION_NAME -e DB_HOST=host.docker.internal -e DB_PORT=3306 eventsync-flask:local
+'''
 
 ## Deploy to Cloud
 
