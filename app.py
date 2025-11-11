@@ -1,5 +1,6 @@
 import os
 from flask import Flask, jsonify, Response, render_template, request, redirect, url_for, session, flash
+from functools import wraps
 import pymysql
 
 app = Flask(__name__, template_folder="templates")
@@ -93,7 +94,7 @@ def login_required(view):
         if not session.get("user_email"):
             flash("Please log in.")
             return redirect(url_for("login"))
-        return view(*args, **kwargs):
+        return view(*args, **kwargs)
     return wrapper
 
 @app.route("/events/new", methods=["GET", "POST"])
@@ -113,13 +114,13 @@ def create_events():
                 ORDER BY v.city, v.street
             """)
             venues = cur.fetchall() #list[(vid,label)]
-        except Exception as e: 
+    except Exception as e: 
             load_err = str(e)
-        finally: 
+    finally: 
             try: conn.close()
             except: pass
         
-        if request.method == "GET":
+    if request.method == "GET":
             return render_template("event_new.html", organizations=orgs, venues=venues, err=load_err)
         
     # POST: validate inputs
@@ -152,20 +153,20 @@ def create_events():
     try: 
         with conn.cursor() as cur: 
         #Comfirm foreign keys exist
-        cur.execute("SELECT 1 FROM venue WHERE vid=%s", (vid,))
+            cur.execute("SELECT 1 FROM venue WHERE vid=%s", (vid,))
             if not cur.fetchone():
                 flash("Selected venue does not exist.")
                 conn.close()
                 return redirect(url_for("create_event"))
 
-        cur.execute("SELECT 1 FROM organization WHERE org_name=%s", (org_name,))
+            cur.execute("SELECT 1 FROM organization WHERE org_name=%s", (org_name,))
             if not cur.fetchone():
                 flash("Selected organization does not exist.")
                 conn.close()
                 return redirect(url_for("create_event"))
 
         # Insert into event (AUTO_INCREMENT path)
-        cur.execute("""
+            cur.execute("""
             INSERT INTO event (vid, room_number, date, start_time, end_time, description, price, event_name)
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
             """, 
