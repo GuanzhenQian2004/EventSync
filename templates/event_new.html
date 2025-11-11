@@ -14,7 +14,7 @@
     <label>Organization*</label>
     <select name="org_name" required>
       <option value="" disabled selected>Select an organization</option>
-      {% for o in orgs %}
+      {% for o in organizations %}
         <option value="{{ o }}">{{ o }}</option>
       {% endfor %}
     </select>

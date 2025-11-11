@@ -137,7 +137,7 @@ def create_events():
     # Basic required fields
     if not (event_name and org_name and vid and date_str and start_str and end_str):
         flash("Please fill all required fields.")
-        return redirect(url_for("create_event"))
+        return redirect(url_for("create_events"))
 
   # Price check 
     try:
@@ -146,10 +146,10 @@ def create_events():
             raise ValueError()
     except ValueError:
         flash("Price must be a non-negative number.")
-        return redirect(url_for("create_event"))
+        return redirect(url_for("create_events"))
 
     #Insert event, then host, link to organization
-    conn.get_db_connection()
+    conn = get_db_connection()
     try: 
         with conn.cursor() as cur: 
         #Comfirm foreign keys exist
@@ -157,20 +157,20 @@ def create_events():
             if not cur.fetchone():
                 flash("Selected venue does not exist.")
                 conn.close()
-                return redirect(url_for("create_event"))
+                return redirect(url_for("create_events"))
 
             cur.execute("SELECT 1 FROM organization WHERE org_name=%s", (org_name,))
             if not cur.fetchone():
                 flash("Selected organization does not exist.")
                 conn.close()
-                return redirect(url_for("create_event"))
+                return redirect(url_for("create_events"))
 
         # Insert into event (AUTO_INCREMENT path)
             cur.execute("""
             INSERT INTO event (vid, room_number, date, start_time, end_time, description, price, event_name)
             VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
             """, 
-            (vid, room_number, date, start_time, end_time, description, price, event_name)
+            (vid, room_number, date_str, start_str, end_str, description, price, event_name)
             )
             eid = cur.lastrowid  
 
@@ -183,7 +183,7 @@ def create_events():
     except Exception as e:
         conn.rollback()
         flash(f"Could not create event: {e}")
-        return redirect(url_for("create_event"))
+        return redirect(url_for("create_events"))
     finally:
         conn.close()
 
