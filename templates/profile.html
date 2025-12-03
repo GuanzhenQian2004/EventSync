@@ -2,10 +2,42 @@
 {% block title %}Profile · EventSync{% endblock %}
 {% block content %}
   <h1>Profile</h1>
+
   {% if user %}
     <p><strong>Email:</strong> {{ user.user_email }}</p>
     <p><strong>Name:</strong> {{ user.name }}</p>
-    <p class="muted">Placeholder profile page. Add more fields and actions later.</p>
+
+    <h2 style="margin-top:24px;">My Events</h2>
+
+    {% if events_created and events_created|length > 0 %}
+      <ul>
+        {% for ev in events_created %}
+          {# ev = (eid, event_name, date, start_time, org_name) #}
+          <li style="margin-bottom:10px;">
+            <a href="{{ url_for('event_detail', eid=ev[0]) }}">
+              <strong>{{ ev[1] }}</strong>
+              <span class="muted">
+                · {{ ev[4] }}
+                · {{ ev[2] }} {{ ev[3] }}
+              </span>
+            </a>
+
+            {# Delete button: POST form to /events/<eid>/delete #}
+            <form method="post"
+                  action="{{ url_for('delete_event', eid=ev[0]) }}"
+                  style="display:inline-block; margin-left:8px;"
+                  onsubmit="return confirm('Are you sure you want to delete this event?');">
+              <button type="submit" style="background:#c62828;">
+                Delete
+              </button>
+            </form>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="muted">You haven’t created any events yet.</p>
+    {% endif %}
+
   {% else %}
     <p class="muted">You’re not logged in.</p>
   {% endif %}

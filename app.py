@@ -331,6 +331,7 @@ def signup():
         conn.close()
 
 @app.get("/profile")
+@login_required
 def profile():
     email = session.get("user_email")
     if not email:
@@ -340,17 +341,71 @@ def profile():
     conn = get_db_connection()
     try:
         with conn.cursor() as cur:
-            cur.execute("SELECT user_email, name FROM users WHERE user_email=%s", (email,))
+            # Fetch user info
+            cur.execute(
+                "SELECT user_email, name FROM users WHERE user_email=%s",
+                (email,),
+            )
             row = cur.fetchone()
+
+            # Fetch events created by this user
+            cur.execute("""
+                SELECT
+                    e.eid,
+                    e.event_name,
+                    e.date,
+                    e.start_time,
+                    o.org_name
+                FROM event e
+                JOIN host h ON h.eid = e.eid
+                JOIN organization o ON o.org_name = h.org_name
+                WHERE e.created_by = %s
+                ORDER BY e.date, e.start_time, e.event_name
+            """, (email,))
+            events_created = cur.fetchall()  # list of (eid, event_name, date, start_time, org_name)
     finally:
         conn.close()
 
-    # row is a tuple with (user_email, name) or None
     user = None
     if row:
         user = type("U", (), {"user_email": row[0], "name": row[1]})
 
-    return render_template("profile.html", user=user)
+    return render_template("profile.html", user=user, events_created=events_created)
+
+@app.post("/events/<int:eid>/delete")
+@login_required
+def delete_event(eid):
+    email = session.get("user_email")
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cur:
+            # Check the event exists and is owned by this user
+            cur.execute("SELECT created_by FROM event WHERE eid=%s", (eid,))
+            row = cur.fetchone()
+
+            if not row:
+                flash("Event not found.")
+                return redirect(url_for("profile"))
+
+            if row[0] != email:
+                flash("You are not allowed to delete this event.")
+                return redirect(url_for("profile"))
+
+            # First delete from host, then from event (if FK is not ON DELETE CASCADE)
+            cur.execute("DELETE FROM host WHERE eid=%s", (eid,))
+            cur.execute("DELETE FROM event WHERE eid=%s", (eid,))
+
+        conn.commit()
+        flash("Event deleted.")
+    except Exception as e:
+        conn.rollback()
+        flash(f"Could not delete event: {e}")
+    finally:
+        conn.close()
+
+    return redirect(url_for("profile"))
+
+
 
 @app.get("/logout")
 def logout():
