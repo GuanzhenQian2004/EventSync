@@ -2,20 +2,37 @@
 {% block title %}Login · EventSync{% endblock %}
 {% block content %}
   <h1>Login</h1>
-  <p class="muted">Email-only login for now (no password).</p>
+  <p class="muted">Log in with your email and password.</p>
   
-  {# Check if an error variable was passed from Flask - if so, display it #}
+  {# Optional error variable (you’re mostly using flash, but this is harmless) #}
   {% if error %}
-    {# Display the error message in a styled div #}
     <div class="error-message">{{ error }}</div>
   {% endif %}
 
-  {# Form that submits to the same URL via POST method #}
   <form method="post">
-    {# Label for the email input field #}
     <label for="user_email">Email</label>
-    <input id="user_email" name="user_email" type="email" placeholder="you@uva.edu" required />
+    <input
+      id="user_email"
+      name="user_email"
+      type="email"
+      placeholder="you@uva.edu"
+      required
+    />
+
+    <label for="password">Password</label>
+    <input
+      id="password"
+      name="password"
+      type="password"
+      placeholder="Your password"
+      required
+    />
+
     <button type="submit">Login</button>
   </form>
-  <p class="muted">Don’t have an account? <a href="{{ url_for('signup') }}">Sign up</a>.</p>
+
+  <p class="muted">
+    Don’t have an account?
+    <a href="{{ url_for('signup') }}">Sign up</a>.
+  </p>
 {% endblock %}

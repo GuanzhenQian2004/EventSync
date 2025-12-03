@@ -1,12 +1,21 @@
 import os
+import re
 from flask import Flask, jsonify, Response, render_template, request, redirect, url_for, session, flash
 from functools import wraps
 import pymysql
+from werkzeug.security import generate_password_hash, check_password_hash
 
 app = Flask(__name__, template_folder="templates")
 
 # Simple dev secret so session/flash works
 app.secret_key = "dev"
+
+# Simple email regex (not perfect, but good enough for most cases)
+EMAIL_RE = re.compile(r"^[^@]+@[^@]+\.[^@]+$")
+
+def is_valid_email(email: str) -> bool:
+    return bool(EMAIL_RE.match(email or ""))
+
 
 def get_db_connection():
     """
@@ -63,29 +72,41 @@ def home():
 def login():
     if request.method == "GET":
         return render_template("login.html")
+
     # POST
     email = (request.form.get("user_email") or "").strip().lower()
-    if not email:
-        flash("Email is required.")
+    password = (request.form.get("password") or "").strip()
+
+    if not email or not password:
+        flash("Email and password are required.")
+        return redirect(url_for("login"))
+
+    if not is_valid_email(email):
+        flash("Please enter a valid email address.")
         return redirect(url_for("login"))
 
     conn = get_db_connection()
     try:
         with conn.cursor() as cur:
-            cur.execute("SELECT user_email, name FROM users WHERE user_email=%s", (email,))
+            # Fetch stored password hash
+            cur.execute(
+                "SELECT user_email, name, password_hash FROM users WHERE user_email=%s",
+                (email,),
+            )
             row = cur.fetchone()
     finally:
         conn.close()
 
-    if row:
-        # NOTE: with Cursor (tuples), row[0]=user_email, row[1]=name
-        session["user_email"] = row[0]
-        session["name"] = row[1]
-        flash("Logged in.")
-        return redirect(url_for("profile"))
-    else:
-        flash("No account for that email. Please sign up.")
-        return redirect(url_for("signup"))
+    # row: (user_email, name, password_hash)
+    if not row or not check_password_hash(row[2], password):
+        # Don't reveal which one was wrong
+        flash("Invalid email or password.")
+        return redirect(url_for("login"))
+
+    session["user_email"] = row[0]
+    session["name"] = row[1]
+    flash("Logged in.")
+    return redirect(url_for("profile"))
 
 
 def login_required(view):
@@ -115,13 +136,15 @@ def create_events():
             """)
             venues = cur.fetchall() #list[(vid,label)]
     except Exception as e: 
-            load_err = str(e)
+        load_err = str(e)
     finally: 
-            try: conn.close()
-            except: pass
+        try:
+            conn.close()
+        except:
+            pass
         
     if request.method == "GET":
-            return render_template("event_new.html", organizations=orgs, venues=venues, err=load_err)
+        return render_template("event_new.html", organizations=orgs, venues=venues, err=load_err)
         
     # POST: validate inputs
     event_name = (request.form.get("event_name") or "").strip()
@@ -139,7 +162,7 @@ def create_events():
         flash("Please fill all required fields.")
         return redirect(url_for("create_events"))
 
-  # Price check 
+    # Price check 
     try:
         price = float(price_str)
         if price < 0:
@@ -152,7 +175,7 @@ def create_events():
     conn = get_db_connection()
     try: 
         with conn.cursor() as cur: 
-        #Comfirm foreign keys exist
+            #Confirm foreign keys exist
             cur.execute("SELECT 1 FROM venue WHERE vid=%s", (vid,))
             if not cur.fetchone():
                 flash("Selected venue does not exist.")
@@ -165,10 +188,10 @@ def create_events():
                 conn.close()
                 return redirect(url_for("create_events"))
 
-        # Insert into event (AUTO_INCREMENT path)
+            # Insert into event (AUTO_INCREMENT path)
             cur.execute("""
-            INSERT INTO event (vid, room_number, date, start_time, end_time, description, price, event_name)
-            VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                INSERT INTO event (vid, room_number, date, start_time, end_time, description, price, event_name)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
             """, 
             (vid, room_number, date_str, start_str, end_str, description, price, event_name)
             )
@@ -191,19 +214,33 @@ def create_events():
 def signup():
     if request.method == "GET":
         return render_template("signup.html")
+
     # POST
     email = (request.form.get("user_email") or "").strip().lower()
     name = (request.form.get("name") or "").strip()
-    if not email or not name:
-        flash("Email and name are required.")
+    password = (request.form.get("password") or "").strip()
+
+    if not email or not name or not password:
+        flash("Email, name, and password are required.")
         return redirect(url_for("signup"))
+
+    if not is_valid_email(email):
+        flash("Please enter a valid email address.")
+        return redirect(url_for("signup"))
+
+    # Optional: basic password length check
+    if len(password) < 8:
+        flash("Password must be at least 8 characters long.")
+        return redirect(url_for("signup"))
+
+    pwd_hash = generate_password_hash(password)
 
     conn = get_db_connection()
     try:
         with conn.cursor() as cur:
             cur.execute(
-                "INSERT INTO users (user_email, name) VALUES (%s, %s)",
-                 (email, name),
+                "INSERT INTO users (user_email, name, password_hash) VALUES (%s, %s, %s)",
+                 (email, name, pwd_hash),
             )   
         conn.commit() # need conn.commit so the new user saves. 
         flash("Account created. You are now logged in.")
@@ -245,22 +282,6 @@ def logout():
     flash("Logged out.")
     return redirect(url_for("home"))
 
-# ---------- Existing debug endpoint ----------
-
-@app.get("/table")
-def tables():
-    try:
-        conn = get_db_connection()
-        with conn.cursor() as cur:
-            cur.execute(
-                "SELECT table_name FROM information_schema.tables WHERE table_schema=%s ORDER BY table_name",
-                (os.environ["DB_NAME"],)
-            )
-            rows = [t[0] for t in cur.fetchall()]
-        conn.close()
-        return jsonify({"schema": os.environ["DB_NAME"], "tables": rows})
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=int(os.getenv("PORT", "8080")), debug=True)
