@@ -2,20 +2,36 @@
 {% block title %}Home · EventSync{% endblock %}
 {% block content %}
   <h1>EventSync</h1>
-  <input type = "text" id = "userSearch" placeholder="Search Events">
+
+  <label for="userSearch">Search Events</label>
+  <input
+    type="text"
+    id="userSearch"
+    placeholder="Search by event or organization"
+  >
 
   {% if err %}
     <div class="flash">Error loading events: {{ err }}</div>
   {% endif %}
 
   {% if events and events|length > 0 %}
-    <ul>
+    <ul id="eventList">
       {% for ev in events %}
-        <li>{{ ev[0] }} · {{ ev[1] }}</li>
+        {# ev = (eid, event_name, org_name) #}
+        <li
+          class="event-item"
+          data-search="{{ ev[1] }} {{ ev[2] }}"
+        >
+          <a href="{{ url_for('event_detail', eid=ev[0]) }}">
+            <strong>{{ ev[1] }}</strong>
+            <span class="muted">· {{ ev[2] }}</span>
+          </a>
+        </li>
       {% endfor %}
     </ul>
   {% else %}
     <p class="muted">No events found.</p>
   {% endif %}
-  <script src = "{{url_for('static',filename='search.js')}}"></script>
+
+  <script src="{{ url_for('static', filename='search.js') }}"></script>
 {% endblock %}

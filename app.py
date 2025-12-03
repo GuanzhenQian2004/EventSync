@@ -50,14 +50,19 @@ def get_db_connection():
 
 @app.get("/")
 def home():
-    # NEW: fetch event_name, org_name for homepage
+    # fetch eid, event_name, org_name for homepage
     events = []
     err = None
     try:
         conn = get_db_connection()
         with conn.cursor() as cur:
-            cur.execute("SELECT event_name, org_name FROM event NATURAL JOIN host ORDER BY event_name")
-            events = cur.fetchall()  # list of tuples: (event_name, org_name)
+            cur.execute("""
+                SELECT e.eid, e.event_name, h.org_name
+                FROM event e
+                JOIN host h ON h.eid = e.eid
+                ORDER BY e.event_name
+            """)
+            events = cur.fetchall()  # list of tuples: (eid, event_name, org_name)
     except Exception as e:
         err = str(e)
     finally:
@@ -67,6 +72,69 @@ def home():
             pass
 
     return render_template("home.html", events=events, err=err)
+
+
+@app.get("/events/<int:eid>")
+def event_detail(eid):
+    conn = get_db_connection()
+    event = None
+    try:
+        with conn.cursor() as cur:
+            cur.execute("""
+                SELECT 
+                    e.eid,
+                    e.event_name,
+                    e.date,
+                    e.start_time,
+                    e.end_time,
+                    e.description,
+                    e.price,
+                    e.room_number,
+                    v.street,
+                    v.city,
+                    v.zip,
+                    z.state,
+                    o.org_name,
+                    e.created_by,
+                    u.name AS creator_name
+                FROM event e
+                JOIN host h ON h.eid = e.eid
+                JOIN organization o ON o.org_name = h.org_name
+                JOIN venue v ON v.vid = e.vid
+                JOIN zip_codes z ON z.zip = v.zip
+                LEFT JOIN users u ON u.user_email = e.created_by
+                WHERE e.eid = %s
+            """, (eid,))
+            row = cur.fetchone()
+    finally:
+        conn.close()
+
+    if not row:
+        flash("Event not found.")
+        return redirect(url_for("home"))
+
+    # unpack row into a dict for easier use in the template
+    event = {
+        "eid": row[0],
+        "event_name": row[1],
+        "date": row[2],
+        "start_time": row[3],
+        "end_time": row[4],
+        "description": row[5],
+        "price": row[6],
+        "room_number": row[7],
+        "street": row[8],
+        "city": row[9],
+        "zip": row[10],
+        "state": row[11],
+        "org_name": row[12],
+        "created_by": row[13],
+        "creator_name": row[14],
+    }
+
+    return render_template("event_detail.html", event=event)
+
+
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
@@ -118,10 +186,11 @@ def login_required(view):
         return view(*args, **kwargs)
     return wrapper
 
+
 @app.route("/events/new", methods=["GET", "POST"])
 @login_required
 def create_events():
-    #load organizations and venues for the form w dropdowns
+    # load organizations and venues for the form w dropdowns
     organizations, venues, load_err = [], [], None
     try: 
         conn = get_db_connection()
@@ -134,7 +203,7 @@ def create_events():
                 JOIN zip_codes z ON z.zip = v.zip
                 ORDER BY v.city, v.street
             """)
-            venues = cur.fetchall() #list[(vid,label)]
+            venues = cur.fetchall()  # list[(vid,label)]
     except Exception as e: 
         load_err = str(e)
     finally: 
@@ -157,6 +226,9 @@ def create_events():
     price_str = (request.form.get("price") or "0").strip()
     description = (request.form.get("description") or "").strip()
 
+    # who is creating this event
+    created_by = session.get("user_email")  # login_required should guarantee this
+
     # Basic required fields
     if not (event_name and org_name and vid and date_str and start_str and end_str):
         flash("Please fill all required fields.")
@@ -171,11 +243,11 @@ def create_events():
         flash("Price must be a non-negative number.")
         return redirect(url_for("create_events"))
 
-    #Insert event, then host, link to organization
+    # Insert event, then host, link to organization
     conn = get_db_connection()
     try: 
         with conn.cursor() as cur: 
-            #Confirm foreign keys exist
+            # Confirm foreign keys exist
             cur.execute("SELECT 1 FROM venue WHERE vid=%s", (vid,))
             if not cur.fetchone():
                 flash("Selected venue does not exist.")
@@ -188,12 +260,16 @@ def create_events():
                 conn.close()
                 return redirect(url_for("create_events"))
 
-            # Insert into event (AUTO_INCREMENT path)
+            # 🔹 Insert into event with created_by
             cur.execute("""
-                INSERT INTO event (vid, room_number, date, start_time, end_time, description, price, event_name)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                INSERT INTO event (
+                    vid, room_number, date, start_time, end_time,
+                    description, price, event_name, created_by
+                )
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
             """, 
-            (vid, room_number, date_str, start_str, end_str, description, price, event_name)
+            (vid, room_number, date_str, start_str, end_str,
+             description, price, event_name, created_by)
             )
             eid = cur.lastrowid  
 

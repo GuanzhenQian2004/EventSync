@@ -1,13 +1,15 @@
-const search = document.getElementById("userSearch");
-search.addEventListener("input",function(){
-    const events = document.querySelectorAll("ul li");
-    const searchLower = search.value.toLowerCase();
-    events.forEach(function(e){
-        const eventName = e.textContent.toLowerCase();
-        if (eventName.includes(searchLower)){
-            e.style.display="";
-        } else {
-            e.style.display="none";
-        }
-    })
-})
+document.addEventListener("DOMContentLoaded", () => {
+  const searchInput = document.getElementById("userSearch");
+  const items = document.querySelectorAll(".event-item");
+
+  if (!searchInput || !items.length) return;
+
+  searchInput.addEventListener("input", () => {
+    const q = searchInput.value.toLowerCase().trim();
+
+    items.forEach(li => {
+      const text = (li.dataset.search || "").toLowerCase();
+      li.style.display = text.includes(q) ? "" : "none";
+    });
+  });
+});

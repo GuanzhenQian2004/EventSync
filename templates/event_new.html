@@ -8,8 +8,9 @@
   {% endif %}
 
   <form method="post" class="form">
+
     <label>Event Name*</label>
-    <input name="event_name" required>
+    <input name="event_name" type="text" required>
 
     <label>Organization*</label>
     <select name="org_name" required>
@@ -48,5 +49,8 @@
     <button type="submit">Create Event</button>
   </form>
 
-  <p style="margin-top:12px;"><a class="btn" href="{{ url_for('home') }}">Back</a></p>
+  <p style="margin-top:12px;">
+    <a class="btn" href="{{ url_for('home') }}">Back</a>
+  </p>
+
 {% endblock %}
