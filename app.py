@@ -405,7 +405,158 @@ def delete_event(eid):
 
     return redirect(url_for("profile"))
 
+@app.route("/events/<int:eid>/edit",methods=["GET","POST"])
+@login_required
+def edit_event(eid):
+    email = session.get("user_email")
+    orgs = []
+    venues = []
+    error = ""
+    try:
+        connection = get_db_connection()
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT org_name FROM organization ORDER BY org_name")
+            orgs = [result[0] for result in cursor.fetchall()]
+            cursor.execute("""
+                SELECT v.vid, CONCAT(v.street, ', ', v.city, ' ', z.state, ' ', v.zip) AS vlabel
+                FROM venue v
+                JOIN zip_codes z ON z.zip = v.zip
+                ORDER BY v.city, v.street
+            """)
+            venues = cursor.fetchall()
+    except Exception as ex:
+        error = str(ex)
+    finally:
+        try:
+            connection.close()
+        except:
+            pass
+    if request.method == "GET":
+       connection = get_db_connection()
+       with connection.cursor() as cursor:
+        cursor.execute("""
+                SELECT 
+                    e.eid,
+                    e.event_name,
+                    e.date,
+                    e.start_time,
+                    e.end_time,
+                    e.description,
+                    e.price,
+                    e.room_number,
+                    v.street,
+                    v.city,
+                    v.zip,
+                    z.state,
+                    o.org_name,
+                    e.created_by,
+                    e.vid,
+                    u.name AS creator_name
+                FROM event e
+                JOIN host h ON h.eid = e.eid
+                JOIN organization o ON o.org_name = h.org_name
+                JOIN venue v ON v.vid = e.vid
+                JOIN zip_codes z ON z.zip = v.zip
+                LEFT JOIN users u ON u.user_email = e.created_by
+                WHERE e.eid = %s
+            """, (eid,))
+        row = cursor.fetchone()
+        if not row:
+            flash("Event Not Found")
+            return(redirect(url_for("profile")))
+        event = {
+                "eid": row[0],
+                "event_name": row[1],
+                "date": row[2],
+                "start_time": row[3],
+                "end_time": row[4],
+                "description": row[5],
+                "price": row[6],
+                "room_number": row[7],
+                "street": row[8],
+                "city": row[9],
+                "zip": row[10],
+                "state": row[11],
+                "org_name": row[12],
+                "created_by": row[13],
+                "vid": row[14]
+            }
+        if event["created_by"] != email:
+            flash("You are not authorized to edit this event")
+            return(redirect(url_for("profile")))
+       return render_template("event_edit.html",event=event,organizations=orgs,venues=venues,error=error)
+    if request.method == "POST":
+        event_name = (request.form.get("event_name") or "").strip()
+        org_name = (request.form.get("org_name") or "").strip()
+        vid = request.form.get("vid")
+        room_number = request.form.get("room_number") or None
+        date_str = (request.form.get("date") or "").strip()
+        start_str = (request.form.get("start_time") or "").strip()
+        end_str = (request.form.get("end_time") or "").strip()
+        price_str = (request.form.get("price") or "0").strip()
+        description = (request.form.get("description") or "").strip()
 
+        # who is creating this event
+        created_by = session.get("user_email")  # login_required should guarantee this
+
+        # Basic required fields
+        if not (event_name and org_name and vid and date_str and start_str and end_str):
+            flash("Please fill all required fields.")
+            return redirect(url_for("edit_event",eid=eid))
+
+        # Price check 
+        try:
+            price = float(price_str)
+            if price < 0:
+                raise ValueError()
+        except ValueError:
+            flash("Price must be a non-negative number.")
+            return redirect(url_for("edit_event",eid=eid))
+        connection = get_db_connection()
+        try: 
+            with connection.cursor() as cur: 
+                # Confirm foreign keys exist
+                cur.execute("SELECT 1 FROM venue WHERE vid=%s", (vid,))
+                if not cur.fetchone():
+                    flash("Selected venue does not exist.")
+                    connection.close()
+                    return redirect(url_for("create_events"))
+
+                cur.execute("SELECT 1 FROM organization WHERE org_name=%s", (org_name,))
+                if not cur.fetchone():
+                    flash("Selected organization does not exist.")
+                    connection.close()
+                    return redirect(url_for("create_events"))
+
+                #update event
+                cur.execute("""
+                    UPDATE event SET 
+                        vid=%s,
+                        room_number=%s,
+                        date=%s,
+                        start_time=%s,
+                        end_time=%s,
+                        description=%s,
+                        price=%s,
+                        event_name=%s
+                    WHERE eid=%s
+                """, 
+                (vid, room_number, date_str, start_str, end_str,
+                description, price, event_name,eid)
+                )
+                cur.execute("UPDATE host SET org_name=%s WHERE eid=%s",(org_name,eid))
+            connection.commit()
+            flash("Event updated!")
+            return redirect(url_for("home"))
+        except Exception as ex:
+            connection.rollback()
+            flash("Could not update event:"+str(ex))
+            return(redirect(url_for("edit_event",eid=eid)))
+        finally:
+            try:
+                connection.close()
+            except:
+                pass
 
 @app.get("/logout")
 def logout():
