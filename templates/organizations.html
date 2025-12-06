@@ -1,0 +1,40 @@
+{%extends "base.html" %}
+{%block title%} Organizations · EventSync{% endblock %}
+
+{% block content %}
+<h1>Organizations</h1>
+
+{% if err %}
+<p class="error">Error loading organiations: {{err}}</p>
+{%endif%}
+
+<h2>Add a new organization</h2>
+<form method="post" action="{{url_for('add_organization')}}">
+    <label for="org_name">Organization name</label>
+    <input id="org_name" name="org_name" type="text" required>
+    <button type="submit">Add organization</button>
+</form>
+
+<h2 style="margin-top: 24px;">Existing organiations</h2>
+
+{% if organizations %}
+<ul>
+    {% for name in organizations %}
+    <li style="margin-bottom:6px;">
+        {{ name }}
+        <form method="post" action="{{ url_for('delete_organization') }}" style="display:inline"
+            onsubmit="return confirm('Delete {{ name }}?');">
+            <input type="hidden" name="org_name" value="{{ name }}">
+            <button type="submit">Delete</button>
+        </form>
+    </li>
+    {% endfor %}
+</ul>
+{% else %}
+<p class="muted">No organizations yet. Add one above!</p>
+{% endif %}
+
+<p style="margin-top:12px;">
+    <a class="btn" href="{{ url_for('home') }}">Back</a>
+</p>
+{% endblock %}
