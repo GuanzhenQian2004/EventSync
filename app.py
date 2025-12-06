@@ -297,7 +297,7 @@ def organizations():
             cur.execute("SELECT org_name FROM organization ORDER BY org_name")
             orgs = [row[0] for row in cur.fetchall()]
     except Exception as e:
-        conn.rollback()
+        err = str(e)
     finally:
         conn.close()
     return render_template("organizations.html", organizations=orgs, err=err)
@@ -330,8 +330,37 @@ def add_organization():
         flash(f"could not add organization: {e}")
     finally:
         conn.close()
+    return redirect(url_for("organizations"))    
+
+@app.post("/organizations/delete")
+@login_required
+def delete_organization():
+    org_name = (request.form.get("org_name") or "").strip()
+
+    if not org_name:
+        flash("No organization specified.")
+        return redirect(url_for("organizations"))
+
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT COUNT(*) FROM host WHERE org_name = %s", (org_name,))
+            count = cur.fetchone()[0]
+
+            if count > 0:
+                flash("Cannot delete organization that still has events.")
+                return redirect(url_for("organizations"))
+
+            cur.execute("DELETE FROM organization WHERE org_name = %s", (org_name,))
+        conn.commit()
+        flash("Organization deleted.")
+    except Exception as e:
+        conn.rollback()
+        flash(f"Could not delete organization: {e}")
+    finally:
+        conn.close()
+
     return redirect(url_for("organizations"))
-    
 
 @app.route("/signup", methods=["GET", "POST"])
 def signup():
