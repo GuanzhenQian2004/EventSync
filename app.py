@@ -289,20 +289,49 @@ def create_events():
 @app.get("/organizations")
 @login_required
 def organizations():
-    #show a list of organizations and a form to add a new one
     conn = get_db_connection()
     orgs = []
     err = None
     try:
-        with conn.cursor() as cur: 
+        with conn.cursor() as cur:
             cur.execute("SELECT org_name FROM organization ORDER BY org_name")
             orgs = [row[0] for row in cur.fetchall()]
-        except Exception as e: 
-            err = str(e)
-        finally: 
-            conn.close()
-        return render_template("organizations.html", organizations=orgs, err=err)
+    except Exception as e:
+        conn.rollback()
+    finally:
+        conn.close()
+    return render_template("organizations.html", organizations=orgs, err=err)
 
+@app.post("/organizations/add")
+@login_required
+def add_organization():
+    #Allow any user, must be logged in, to add a new organization
+    org_name = (request.form.get("org_name") or "").strip()
+
+    if not org_name:
+        flash("the organization name is required")
+        return redirect(url_for("organizations"))
+
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute(
+                "INSERT INTO organization (org_name) VALUES (%s)",
+                (org_name,),
+            )
+        conn.commit()
+        flash("Organization added!")
+    except pymysql.err.IntegrityError:
+        #organization already exists, do not add duplicate name
+        conn.rollback()
+        flash("that organization already exits.")
+    except Exception as e:
+        conn.rollback()
+        flash(f"could not add organization: {e}")
+    finally:
+        conn.close()
+    return redirect(url_for("organizations"))
+    
 
 @app.route("/signup", methods=["GET", "POST"])
 def signup():
