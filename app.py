@@ -286,6 +286,24 @@ def create_events():
     finally:
         conn.close()
 
+@app.get("/organizations")
+@login_required
+def organizations():
+    #show a list of organizations and a form to add a new one
+    conn = get_db_connection()
+    orgs = []
+    err = None
+    try:
+        with conn.cursor() as cur: 
+            cur.execute("SELECT org_name FROM organization ORDER BY org_name")
+            orgs = [row[0] for row in cur.fetchall()]
+        except Exception as e: 
+            err = str(e)
+        finally: 
+            conn.close()
+        return render_template("organizations.html", organizations=orgs, err=err)
+
+
 @app.route("/signup", methods=["GET", "POST"])
 def signup():
     if request.method == "GET":
