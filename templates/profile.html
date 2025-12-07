@@ -48,6 +48,27 @@
       <p class="muted">You haven’t created any events yet.</p>
     {% endif %}
 
+    <h2 style="margin-top:24px;">My RSVP'ed Events</h2>
+
+    {% if events_rsvp and events_rsvp|length > 0 %}
+      <ul>
+        {% for ev in events_rsvp %}
+          {# ev = (eid, event_name, date, start_time, org_name) #}
+          <li style="margin-bottom:10px;">
+            <a href="{{ url_for('event_detail', eid=ev[0]) }}">
+              <strong>{{ ev[1] }}</strong>
+              <span class="muted">
+                · {{ ev[4] }}
+                · {{ ev[2] }} {{ ev[3] }}
+              </span>
+            </a>
+          </li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="muted">You haven’t RSVP'ed to any events yet.</p>
+    {% endif %}
+
   {% else %}
     <p class="muted">You’re not logged in.</p>
   {% endif %}

@@ -439,6 +439,22 @@ def profile():
                 ORDER BY e.date, e.start_time, e.event_name
             """, (email,))
             events_created = cur.fetchall()  # list of (eid, event_name, date, start_time, org_name)
+
+            cur.execute("""
+                SELECT
+                    e.eid,
+                    e.event_name,
+                    e.date,
+                    e.start_time,
+                    o.org_name
+                FROM event e
+                NATURAL JOIN rsvp 
+                NATURAL JOIN host
+                NATURAL JOIN organization o
+                WHERE user_email=%s
+                ORDER BY e.date, e.start_time, e.event_name
+            """,(email,))
+            events_rsvp = cur.fetchall()
     finally:
         conn.close()
 
@@ -446,7 +462,7 @@ def profile():
     if row:
         user = type("U", (), {"user_email": row[0], "name": row[1]})
 
-    return render_template("profile.html", user=user, events_created=events_created)
+    return render_template("profile.html", user=user, events_created=events_created, events_rsvp = events_rsvp)
 
 @app.post("/events/<int:eid>/delete")
 @login_required
@@ -633,6 +649,26 @@ def edit_event(eid):
                 connection.close()
             except:
                 pass
+
+@app.route('/events/<int:eid>/rsvp')
+@login_required
+def rsvp_event(eid):
+    email = session.get("user_email")
+    connection = get_db_connection()
+    try:
+        with connection.cursor() as cursor:
+            cursor.execute('SELECT * FROM rsvp WHERE eid=%s AND user_email=%s',(eid,email))
+            if cursor.fetchone():
+                flash("Already RSVP'ed to this event")
+            else:
+                cursor.execute('INSERT INTO rsvp (user_email,eid) VALUES (%s,%s)',(email,eid))
+                connection.commit()
+    except Exception as e:
+        connection.rollback()
+        flash(e)
+    finally:
+        connection.close()
+    return(redirect(url_for("profile")))
 
 @app.get("/logout")
 def logout():
