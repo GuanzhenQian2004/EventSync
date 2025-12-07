@@ -130,6 +130,7 @@
         <span class="muted">Signed in as {{ session.get('user_email') }}</span>
         <a href="{{ url_for('logout') }}">Logout</a>
         <a href="{{ url_for('create_events') }}">New Event</a>
+        <a href="{{ url_for('organizations') }}">Organizations</a>
       {% endif %}
     </nav>
   </header>
