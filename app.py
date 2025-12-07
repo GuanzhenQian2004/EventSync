@@ -362,6 +362,30 @@ def delete_organization():
 
     return redirect(url_for("organizations"))
 
+@app.get("/venues")
+@login_required
+def venues():
+    conn = get_db_connection()
+    venues = []
+    err = None
+    try: 
+        with conn.cursor() as cur: 
+            cur.execute("""
+                SELECT v.vid, v.street, v.city, z.state, v.zip
+                FROM venue v
+                JOIN zip_codes z ON z.zip = v.zip
+                ORDER BY v.city, v.street
+            """)
+            venues = cur.fetchall()
+        except Exception as e: 
+            err = str(e)
+        finally: 
+            conn.close()
+        
+        return render_template("venues.html", venues=venues, err=err)
+        
+
+
 @app.route("/signup", methods=["GET", "POST"])
 def signup():
     if request.method == "GET":
