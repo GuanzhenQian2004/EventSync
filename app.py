@@ -420,9 +420,6 @@ def add_venue():
             conn.close()
         return redirect(url_for("venues"))
 
-    
-
-
 @app.route("/signup", methods=["GET", "POST"])
 def signup():
     if request.method == "GET":
