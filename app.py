@@ -383,7 +383,44 @@ def venues():
             conn.close()
         
         return render_template("venues.html", venues=venues, err=err)
-        
+    
+
+@app.post("/venues/add")
+@login_required
+def add_venue():
+    street = (request.form.get("street") or "").strip()
+    state = (request.form.get("city") or "").strip()
+    city = (request.form.get("state") or "").strip().upper()
+    zip_codes = (request.form.get("zip") or "").stip()
+
+    if not (street and city and state and zip_codes):
+        flash("Street, City, State, and Zip-Code are all required.")
+        return redirect(url_for("venues"))
+
+    conn = get_db_connection()
+    try: 
+        with conn.cursor() as cur: 
+            cur.execute("SELECT 1 FROM zip_codes WHERE zip = %s", (zip_codes))
+            if not cur.fetchone():
+                cur.execute(
+                    "INSERT INTO zipcodes (zip, state) VALUES (%s,%s)",
+                    (zip_codes, state),
+                )
+            
+            cur.execute(
+                "INSERT INTO venue (street, citym zip) VALUES (%s,%s,%s)",
+                (zip_codes, state),
+            )
+            conn.commit()
+            flash("Venue Added!")
+        except Exception as e: 
+            conn.rollback()
+            flash(f"We're sorry, we could not add the venue: {e}")
+        finally: 
+            conn.close()
+        return redirect(url_for("venues"))
+
+    
 
 
 @app.route("/signup", methods=["GET", "POST"])
