@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}Venues · EventSync{% endblock %}
+
+{% block content %}
+<h1>Venues</h1>
+
+{% if err %}
+<p class="error">Error loading venues: {{ err }}</p>
+{% endif %}
+
+<h2>Add a new venue</h2>
+<form method="post" action="{{ url_for('add_venue') }}">
+    <label for="street">Street</label>
+    <input id="street" name="street" type="text" required>
+
+    <label for="city">City</label>
+    <input id="city" name="city" type="text" required>
+
+    <label for="state">State (e.g., VA)</label>
+    <input id="state" name="state" type="text" maxlength="2" required>
+
+    <label for="zip">ZIP Code</label>
+    <input id="zip" name="zip" type="text" required>
+
+    <button type="submit">Add venue</button>
+</form>
+
+<h2 style="margin-top:24px;">Existing venues</h2>
+
+{% if venues %}
+<ul>
+    {% for vid, street, city, state, zip in venues %}
+    <li style="margin-bottom:6px;">
+        {{ street }}, {{ city }} {{ state }} {{ zip }}
+    </li>
+    {% endfor %}
+</ul>
+{% else %}
+<p class="muted">No venues yet. Add one above!</p>
+{% endif %}
+
+<p style="margin-top:12px;">
+    <a class="btn" href="{{ url_for('home') }}">Back</a>
+</p>
+{% endblock %}

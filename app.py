@@ -362,6 +362,65 @@ def delete_organization():
 
     return redirect(url_for("organizations"))
 
+@app.get("/venues")
+@login_required
+def venues():
+    conn = get_db_connection()
+    venues = []
+    err = None
+    try: 
+        with conn.cursor() as cur: 
+            cur.execute("""
+                SELECT v.vid, v.street, v.city, z.state, v.zip
+                FROM venue v
+                JOIN zip_codes z ON z.zip = v.zip
+                ORDER BY v.city, v.street
+            """)
+            venues = cur.fetchall()
+    except Exception as e: 
+        err = str(e)
+    finally: 
+        conn.close()
+        
+    return render_template("venues.html", venues=venues, err=err)
+    
+@app.post("/venues/add")
+@login_required
+def add_venue():
+    street = (request.form.get("street") or "").strip()
+    city = (request.form.get("city") or "").strip()
+    state = (request.form.get("state") or "").strip().upper()
+    zip_code = (request.form.get("zip") or "").strip()  
+
+    if not (street and city and state and zip_code):
+        flash("Street, city, state, and ZIP are required.")
+        return redirect(url_for("venues"))
+
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT 1 FROM zip_codes WHERE zip = %s", (zip_code,))
+            if not cur.fetchone():
+                cur.execute(
+                    "INSERT INTO zip_codes (zip, state) VALUES (%s, %s)",
+                    (zip_code, state),
+                )
+            cur.execute("SELECT COALESCE(MAX(vid), 0) + 1 FROM venue")
+            next_vid = cur.fetchone()[0]
+            cur.execute(
+                "INSERT INTO venue (vid, street, city, zip) VALUES (%s, %s, %s, %s)",
+                (next_vid, street, city, zip_code),
+            )
+        conn.commit()
+        flash("Venue added!")
+    except Exception as e:
+        conn.rollback()
+        flash(f"We're sorry, we could not add the venue: {e}")
+    finally:
+        conn.close()
+
+    return redirect(url_for("venues"))
+
 @app.route("/signup", methods=["GET", "POST"])
 def signup():
     if request.method == "GET":
