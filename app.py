@@ -371,6 +371,8 @@ def signup():
     email = (request.form.get("user_email") or "").strip().lower()
     name = (request.form.get("name") or "").strip()
     password = (request.form.get("password") or "").strip()
+    phone_number = (request.form.get("phone_number") or "").strip()
+    phone_number_2 = (request.form.get("phone_number_2") or "").strip()
 
     if not email or not name or not password:
         flash("Email, name, and password are required.")
@@ -393,7 +395,11 @@ def signup():
             cur.execute(
                 "INSERT INTO users (user_email, name, password_hash) VALUES (%s, %s, %s)",
                  (email, name, pwd_hash),
-            )   
+            )  
+            if phone_number != "": 
+                cur.execute("INSERT INTO phone_numbers (user_email,phone_number) VALUES (%s,%s)",(email, phone_number))
+            if phone_number_2 != "":
+                cur.execute("INSERT INTO phone_numbers (user_email,phone_number) VALUES (%s,%s)",(email, phone_number_2))
         conn.commit() # need conn.commit so the new user saves. 
         flash("Account created. You are now logged in.")
         session["user_email"] = email
@@ -423,6 +429,12 @@ def profile():
                 (email,),
             )
             row = cur.fetchone()
+
+            cur.execute("SELECT phone_number FROM phone_numbers WHERE user_email=%s",(email,))
+            
+            phones = cur.fetchall()
+            phone1 = phones[0][0] if len(phones) > 0 else None
+            phone2 = cur.fetchone()[1][0] if len(phones) > 1 else None
 
             # Fetch events created by this user
             cur.execute("""
@@ -462,7 +474,7 @@ def profile():
     if row:
         user = type("U", (), {"user_email": row[0], "name": row[1]})
 
-    return render_template("profile.html", user=user, events_created=events_created, events_rsvp = events_rsvp)
+    return render_template("profile.html", user=user, events_created=events_created, events_rsvp = events_rsvp,phone1=phone1,phone2=phone2)
 
 @app.post("/events/<int:eid>/delete")
 @login_required

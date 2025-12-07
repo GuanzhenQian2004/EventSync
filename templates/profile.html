@@ -6,7 +6,12 @@
   {% if user %}
     <p><strong>Email:</strong> {{ user.user_email }}</p>
     <p><strong>Name:</strong> {{ user.name }}</p>
-
+    {% if phone1 %}
+      <p><strong>Phone Number:</strong> {{ phone1 }}</p>
+      {% if phone2%}
+        <p><strong>Alternate Phone Number:</strong> {{ phone2 }}</p>
+      {%endif%}
+    {%endif%}
     <h2 style="margin-top:24px;">My Events</h2>
 
     {% if events_created and events_created|length > 0 %}
