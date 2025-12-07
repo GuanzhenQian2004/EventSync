@@ -31,6 +31,16 @@
                 Delete
               </button>
             </form>
+
+            {# Update button #}
+              <form method="get"
+                    action="{{ url_for('edit_event', eid=ev[0]) }}"
+                    style="display:inline-block; margin-left:8px;"
+                    >
+                <button type="submit" style="background:#1c4db7;">
+                  Update
+                </button>
+              </form>
           </li>
         {% endfor %}
       </ul>
