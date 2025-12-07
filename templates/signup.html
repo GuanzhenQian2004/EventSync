@@ -2,7 +2,7 @@
 {% block title %}Signup · EventSync{% endblock %}
 {% block content %}
   <h1>Signup</h1>
-  <p class="muted">Create an account with your email, name, and a password.</p>
+  <p class="muted">Create an account with your email, name, and a password. Optionally add your phone number(s)</p>
 
   <form method="post">
     <label for="user_email">Email</label>
@@ -32,6 +32,21 @@
       required
     />
 
+    <label for="phone_number">Phone Number</label>
+    <input
+      id="phone_number"
+      name="phone_number"
+      type="phone_number"
+      placeholder="000-000-0000"
+    />
+
+    <label for="phone_number_2">Alternate Phone Number</label>
+    <input
+      id="phone_number_2"
+      name="phone_number_2"
+      type="phone_number_2"
+      placeholder="000-000-0000"
+    />
     <button type="submit">Create Account</button>
   </form>
 {% endblock %}
