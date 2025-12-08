@@ -1,5 +1,8 @@
 # EventSync
 
+## Website
+Current App is hosted at [Link](https://flask-mysql-demo-434797694469.us-east4.run.app)
+
 ## Set Up Enviornment
 In EventSync directory, create two enviornment file name .env and env.yaml:  
 Replace string inside " " with keys
