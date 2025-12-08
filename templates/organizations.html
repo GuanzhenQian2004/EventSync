@@ -12,16 +12,25 @@
 <form method="post" action="{{url_for('add_organization')}}">
     <label for="org_name">Organization name</label>
     <input id="org_name" name="org_name" type="text" required>
+
+    <label>Venue*</label>
+    <select name="vid" required>
+      <option value="" disabled selected>Select a venue</option>
+      {% for vid, vlabel in venues %}
+        <option value="{{ vid }}">{{ vlabel }}</option>
+      {% endfor %}
+    </select>
     <button type="submit">Add organization</button>
+
 </form>
 
 <h2 style="margin-top: 24px;">Existing organiations</h2>
 
-{% if organizations %}
+{% if venues_with_orgs %}
 <ul>
-    {% for name in organizations %}
+    {% for org in venues_with_orgs %}
     <li style="margin-bottom:6px;">
-        {{ name }}
+        {{ org[0] }} {% if org[2] %} - {{org[2]}} {%endif%}
         <form method="post"
             action="{{ url_for('join_organization', org_name=name) }}" 
             style="display:inline"

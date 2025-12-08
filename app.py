@@ -309,6 +309,7 @@ def create_events():
 def organizations():
     conn = get_db_connection()
     orgs = []
+    venues_with_orgs=[]
     joined_orgs = set()
     err = None
     user_email = session.get("user_email")
@@ -316,6 +317,20 @@ def organizations():
         with conn.cursor() as cur:
             cur.execute("SELECT org_name FROM organization ORDER BY org_name")
             orgs = [row[0] for row in cur.fetchall()]
+            cur.execute("""
+                SELECT v.vid, CONCAT(v.street, ', ', v.city, ' ', z.state, ' ', v.zip) AS vlabel
+                FROM venue v
+                JOIN zip_codes z ON z.zip = v.zip
+                ORDER BY v.city, v.street
+            """)
+            venues = cur.fetchall()  # list[(vid,label)]
+            cur.execute("""
+                SELECT o.org_name,v.vid, CONCAT(v.street, ', ', v.city, ' ', z.state, ' ', v.zip) AS vlabel
+                FROM organization o LEFT JOIN based_at b ON o.org_name=b.org_name
+                LEFT JOIN venue v ON v.vid=b.vid
+                LEFT JOIN zip_codes z ON z.zip = v.zip
+            """)
+            venues_with_orgs = cur.fetchall()
 
             if user_email:
                 cur.execute("""
@@ -329,18 +344,14 @@ def organizations():
         err = str(e)
     finally:
         conn.close()
-    return render_template(
-        "organizations.html", 
-        organizations=orgs, \
-        joined_orgs=joined_orgs,
-        err=err,
-        )
+    return render_template("organizations.html", organizations=orgs, err=err,venues=venues,venues_with_orgs=venues_with_orgs,joined_orgs=joined_orgs)
 
 @app.post("/organizations/add")
 @login_required
 def add_organization():
     #Allow any user, must be logged in, to add a new organization
     org_name = (request.form.get("org_name") or "").strip()
+    venue = (request.form.get("vid") or "")
 
     if not org_name:
         flash("the organization name is required")
@@ -353,6 +364,10 @@ def add_organization():
                 "INSERT INTO organization (org_name) VALUES (%s)",
                 (org_name,),
             )
+            if venue != "":
+                cur.execute(
+                    "INSERT INTO based_at (org_name,vid) VALUES (%s,%s)",(org_name,venue)
+                )
         conn.commit()
         flash("Organization added!")
     except pymysql.err.IntegrityError:
