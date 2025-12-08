@@ -32,13 +32,13 @@
     <li style="margin-bottom:6px;">
         {{ org[0] }} {% if org[2] %} - {{org[2]}} {%endif%}
         <form method="post"
-            action="{{ url_for('join_organization', org_name=name) }}" 
+            action="{{ url_for('join_organization', org_name=org[0]) }}" 
             style="display:inline"
-            onsubmit="return confirm('Join {{ name }}?');">
+            onsubmit="return confirm('Join {{ org[0] }}?');">
             
             <button type="submit"
                     {% if name in joined_orgs %}disabled{% endif %}>
-                {% if name in joined_orgs %}
+                {% if org[0] in joined_orgs %}
                     Joined
                 {% else %}
                     Join
