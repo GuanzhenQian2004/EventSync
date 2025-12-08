@@ -113,6 +113,12 @@ def event_detail(eid):
             sponsors_dict = {}
             for company,amt in sponsors:
                 sponsors_dict[company] = amt
+            cur.execute("CALL count_rsvps(%s)",(eid,))
+            rsvp_count=cur.fetchone()
+            if rsvp_count == None:
+                rsvp_count=0
+            else:
+                rsvp_count=rsvp_count[0]
             
     finally:
         conn.close()
@@ -140,7 +146,7 @@ def event_detail(eid):
         "creator_name": row[14]
     }
 
-    return render_template("event_detail.html", event=event,sponsors_dict=sponsors_dict)
+    return render_template("event_detail.html", event=event,sponsors_dict=sponsors_dict,rsvp_count=rsvp_count)
 
 
 
@@ -549,7 +555,7 @@ def profile():
             
             phones = cur.fetchall()
             phone1 = phones[0][0] if len(phones) > 0 else None
-            phone2 = cur.fetchone()[1][0] if len(phones) > 1 else None
+            phone2 = phones[1][0] if len(phones) > 1 else None
 
             # Fetch events created by this user
             cur.execute("""
