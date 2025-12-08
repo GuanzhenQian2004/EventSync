@@ -46,8 +46,46 @@
     <label>Description</label>
     <textarea name="description" rows="4" placeholder="Add details..."></textarea>
 
+    <div id="sponsor_container">
+      <button type="button" id='sponsor_btn'>Add Corporate Sponsor</button>
+    </div>
+
     <button type="submit">Create Event</button>
   </form>
+
+  <script>
+    (function(){
+      const container = document.getElementById("sponsor_container")
+      const sponsor_button = document.getElementById('sponsor_btn')
+      function addNewSponsor(){
+        const wrapper = document.createElement('div')
+        wrapper.style.display = 'flex'
+        wrapper.style.gap = '10px'
+        wrapper.style.marginTop='8px'
+        const company_input_label = document.createElement('label')
+        company_input_label.textContent = "Company"
+        const company_input = document.createElement('input')
+        company_input.type = 'text'
+        company_input.name ='company[]'
+        const amt_input_label = document.createElement('label')
+        amt_input_label.textContent = 'Amount'
+        const amt_input = document.createElement('input')
+        amt_input.type = 'text'
+        amt_input.name = 'amount[]'
+        wrapper.appendChild(company_input_label)
+        wrapper.appendChild(company_input)
+        wrapper.appendChild(amt_input_label)
+        wrapper.appendChild(amt_input)
+        return wrapper
+      }
+
+      sponsor_button.addEventListener('click',function(){
+        const newSec = addNewSponsor()
+        container.appendChild(newSec)
+      })
+      
+    })();
+  </script>
 
   <p style="margin-top:12px;">
     <a class="btn" href="{{ url_for('home') }}">Back</a>

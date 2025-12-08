@@ -35,6 +35,16 @@
     <p>{{ event.description }}</p>
   {% endif %}
 
+  {% if sponsors_dict %}
+  <h3>Corporate Sponsors</h3>
+  <ul>
+  {% for company,amount in sponsors_dict.items() %}
+  
+    <li> {{company}} : $ {{amount}}</li>
+    {%endfor%}
+  </ul>
+  {% endif %}
+
   {% if event.creator_name or event.created_by %}
     <p class="muted">
       Created by

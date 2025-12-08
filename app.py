@@ -106,6 +106,14 @@ def event_detail(eid):
                 WHERE e.eid = %s
             """, (eid,))
             row = cur.fetchone()
+            cur.execute("""
+                        SELECT company_name, amount FROM corporate_sponsorship WHERE eid=%s
+                        """,(eid,))
+            sponsors = cur.fetchall()
+            sponsors_dict = {}
+            for company,amt in sponsors:
+                sponsors_dict[company] = amt
+            
     finally:
         conn.close()
 
@@ -129,10 +137,10 @@ def event_detail(eid):
         "state": row[11],
         "org_name": row[12],
         "created_by": row[13],
-        "creator_name": row[14],
+        "creator_name": row[14]
     }
 
-    return render_template("event_detail.html", event=event)
+    return render_template("event_detail.html", event=event,sponsors_dict=sponsors_dict)
 
 
 
@@ -225,6 +233,8 @@ def create_events():
     end_str = (request.form.get("end_time") or "").strip()
     price_str = (request.form.get("price") or "0").strip()
     description = (request.form.get("description") or "").strip()
+    company_names = request.form.getlist("company[]")
+    amounts = request.form.getlist("amount[]")
 
     # who is creating this event
     created_by = session.get("user_email")  # login_required should guarantee this
@@ -275,6 +285,14 @@ def create_events():
 
             # Link event to org in host
             cur.execute("INSERT INTO host (eid, org_name) VALUES (%s, %s)", (eid, org_name))
+
+            for i in range(len(company_names)):
+                company = company_names[i].strip()
+                amount = amounts[i].strip()
+                if company and amount:
+                    cur.execute("""
+                        INSERT INTO corporate_sponsorship (eid,company_name,amount) VALUES (%s,%s,%s)
+                                """,(eid,company,amount))
 
         conn.commit()
         flash("Event created!")
