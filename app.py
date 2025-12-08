@@ -348,36 +348,6 @@ def add_organization():
         conn.close()
     return redirect(url_for("organizations"))    
 
-@app.post("/organizations/delete")
-@login_required
-def delete_organization():
-    org_name = (request.form.get("org_name") or "").strip()
-
-    if not org_name:
-        flash("No organization specified.")
-        return redirect(url_for("organizations"))
-
-    conn = get_db_connection()
-    try:
-        with conn.cursor() as cur:
-            cur.execute("SELECT COUNT(*) FROM host WHERE org_name = %s", (org_name,))
-            count = cur.fetchone()[0]
-
-            if count > 0:
-                flash("Cannot delete organization that still has events.")
-                return redirect(url_for("organizations"))
-
-            cur.execute("DELETE FROM organization WHERE org_name = %s", (org_name,))
-        conn.commit()
-        flash("Organization deleted.")
-    except Exception as e:
-        conn.rollback()
-        flash(f"Could not delete organization: {e}")
-    finally:
-        conn.close()
-
-    return redirect(url_for("organizations"))
-
 @app.get("/venues")
 @login_required
 def venues():
