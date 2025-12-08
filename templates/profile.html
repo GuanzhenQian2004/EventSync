@@ -74,6 +74,17 @@
       <p class="muted">You haven’t RSVP'ed to any events yet.</p>
     {% endif %}
 
+    <h2 style="margin-top:24px;">My Organizations</h2>
+    {% if joined_orgs and joined_orgs|length > 0 %}
+      <ul>
+        {% for org_name in joined_orgs %}
+          <li>{{ org_name }}</li>
+        {% endfor %}
+      </ul>
+    {% else %}
+      <p class="muted">You haven't joined any Organizations ... yet!</p>
+    {% endif %}
+    
   {% else %}
     <p class="muted">You’re not logged in.</p>
   {% endif %}
