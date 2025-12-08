@@ -302,11 +302,11 @@ def organizations():
             if user_email:
                 cur.execute("""
                     SELECT org_name
-                    FROM user_organization
+                    FROM member_of
                     WHERE user_email = %s
                     ORDER BY org_name
-                    """, (user_email,))
-                    joined_orgs = {row[0] for row in cur.fetchall()}
+                """, (user_email,))
+                joined_orgs = {row[0] for row in cur.fetchall()}
     except Exception as e:
         err = str(e)
     finally:
@@ -347,6 +347,43 @@ def add_organization():
     finally:
         conn.close()
     return redirect(url_for("organizations"))    
+
+@app.post("/organizations/<string:org_name>/join")
+@login_required
+def join_organization(org_name):
+    org_name = org_name #(request.form.get("org_name") or "").strip()
+    user_email = session.get("user_email")
+
+    if not org_name:
+        flash("No organization specified.")
+        return redirect(url_for("organizations"))
+
+    if not user_email:
+        flash("Please log in.")
+        return redirect(url_for("login"))
+
+    conn = get_db_connection()
+    try:
+        with conn.cursor() as cur:
+            cur.execute("SELECT 1 FROM organization WHERE org_name = %s", (org_name,))
+            if not cur.fetchone():
+                flash("That organization does not exist.")
+                return redirect(url_for("organizations"))
+            cur.execute("""
+                INSERT INTO member_of (user_email, org_name)
+                VALUES (%s, %s)
+            """, (user_email, org_name))
+        conn.commit()
+        flash(f"You joined {org_name}!")
+    except pymysql.err.IntegrityError:
+        conn.rollback()
+        flash(f"You are already a member of {org_name}.")
+    except Exception as e:
+        conn.rollback()
+        flash(f"Could not join organization: {e}")
+    finally:
+        conn.close()
+    return redirect(url_for("organizations"))
 
 @app.get("/venues")
 @login_required

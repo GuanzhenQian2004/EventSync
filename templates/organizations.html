@@ -22,10 +22,19 @@
     {% for name in organizations %}
     <li style="margin-bottom:6px;">
         {{ name }}
-        <form method="post" action="{{ url_for('delete_organization') }}" style="display:inline"
-            onsubmit="return confirm('Delete {{ name }}?');">
-            <input type="hidden" name="org_name" value="{{ name }}">
-            <button type="submit">Delete</button>
+        <form method="post"
+            action="{{ url_for('join_organization', org_name=name) }}" 
+            style="display:inline"
+            onsubmit="return confirm('Join {{ name }}?');">
+            
+            <button type="submit"
+                    {% if name in joined_orgs %}disabled{% endif %}>
+                {% if name in joined_orgs %}
+                    Joined
+                {% else %}
+                    Join
+                {% endif %}    
+                </button>
         </form>
     </li>
     {% endfor %}
