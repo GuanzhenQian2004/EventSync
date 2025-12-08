@@ -14,7 +14,7 @@
     <input id="org_name" name="org_name" type="text" required>
 
     <label>Venue*</label>
-    <select name="vid" required>
+    <select name="vid">
       <option value="" disabled selected>Select a venue</option>
       {% for vid, vlabel in venues %}
         <option value="{{ vid }}">{{ vlabel }}</option>
