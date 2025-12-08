@@ -291,16 +291,32 @@ def create_events():
 def organizations():
     conn = get_db_connection()
     orgs = []
+    joined_orgs = set()
     err = None
+    user_email = session.get("user_email")
     try:
         with conn.cursor() as cur:
             cur.execute("SELECT org_name FROM organization ORDER BY org_name")
             orgs = [row[0] for row in cur.fetchall()]
+
+            if user_email:
+                cur.execute("""
+                    SELECT org_name
+                    FROM user_organization
+                    WHERE user_email = %s
+                    ORDER BY org_name
+                    """, (user_email,))
+                    joined_orgs = {row[0] for row in cur.fetchall()}
     except Exception as e:
         err = str(e)
     finally:
         conn.close()
-    return render_template("organizations.html", organizations=orgs, err=err)
+    return render_template(
+        "organizations.html", 
+        organizations=orgs, \
+        joined_orgs=joined_orgs,
+        err=err,
+        )
 
 @app.post("/organizations/add")
 @login_required
