@@ -327,7 +327,7 @@ def organizations():
                 joined_orgs = {row[0] for row in cur.fetchall()}
     except Exception as e:
         err = str(e)
-    finally:
+    finally: 
         conn.close()
     return render_template(
         "organizations.html", 
@@ -552,6 +552,15 @@ def profile():
             """, (email,))
             events_created = cur.fetchall()  # list of (eid, event_name, date, start_time, org_name)
 
+        #organizations this user is a member of
+            cur.execute("""
+                SELECT org_name
+                FROM member_of
+                WHERE user_email = %s
+                ORDER BY org_name
+            """, (email,))
+            joined_orgs = [r[0] for r in cur.fetchall()]
+
             cur.execute("""
                 SELECT
                     e.eid,
@@ -574,7 +583,15 @@ def profile():
     if row:
         user = type("U", (), {"user_email": row[0], "name": row[1]})
 
-    return render_template("profile.html", user=user, events_created=events_created, events_rsvp = events_rsvp,phone1=phone1,phone2=phone2)
+    return render_template(
+        "profile.html", 
+        user=user, 
+        events_created=events_created,
+        joined_orgs=joined_orgs, 
+        events_rsvp = events_rsvp,
+        phone1=phone1,
+        phone2=phone2
+        )
 
 @app.post("/events/<int:eid>/delete")
 @login_required
